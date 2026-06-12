@@ -3,7 +3,9 @@ name: GLaDOS Auto Checkin
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 4 * * *'
+    # GitHub Actions 的 schedule 使用 UTC，04:17 UTC 约为北京时间 12:17。
+    # 避开整点可以减少公共 runner 调度拥堵导致的长时间延迟。
+    - cron: '17 4 * * *'
 
 jobs:
   checkin:
@@ -15,7 +17,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |

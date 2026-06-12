@@ -68,7 +68,7 @@ koa:sess=xxxxxx; koa:sess.sig=yyyyyy
 #### 添加第一个 Secret（必填）
 
 - **Name**：`COOKIES`
-- **Value**：粘贴刚才复制的 Cookie
+- **Value**：粘贴刚才复制的完整 Cookie
 
 点击 **Save**
 
@@ -97,21 +97,23 @@ koa:sess=xxxxxx; koa:sess.sig=yyyyyy
 
 ## 👥 多账号如何添加？
 
-### 规则很简单：
+### 推荐规则：
 
-> **多个账号的 Cookie，用 `&` 连接**
+> **多个账号的 Cookie，每行一个**
 
 示例：
 
 ```
-cookie_账号1 & cookie_账号2 & cookie_账号3
+koa:sess=账号1; koa:sess.sig=账号1签名
+koa:sess=账号2; koa:sess.sig=账号2签名
+koa:sess=账号3; koa:sess.sig=账号3签名
 ```
 
 ⚠️ 注意事项：
 
-- 不要换行
-- 不要用逗号
 - 每个 cookie 都是完整的一段
+- 不要用逗号
+- 旧版 `cookie_账号1 & cookie_账号2` 的写法仍然兼容，但更推荐每行一个
 
 ------
 
@@ -120,11 +122,11 @@ cookie_账号1 & cookie_账号2 & cookie_账号3
 项目默认设置为：
 
 ```
-每天 UTC 04:00 自动运行
+每天 UTC 04:17 自动运行
 ```
 
 换算成北京时间：
 
-> 🕛 **每天中午 12 点自动签到**
+> 🕛 **每天中午 12:17 左右自动签到**
 
-你无需做任何操作，它会每天自动运行。
+GitHub Actions 的定时任务可能会有延迟，不保证秒级准点。脚本会在签到失败时让 Actions 变红，并在日志中输出失败原因，方便你判断是否需要更新 Cookie。
