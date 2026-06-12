@@ -156,7 +156,12 @@ def main():
             elif "repeat" in msg_lower or "already" in msg_lower:
                 repeat += 1
                 status = f"🔁 已签到({response_summary(r)})"
-            elif "got" in msg_lower or j.get("code") == 0:
+            elif (
+                "got" in msg_lower
+                or "observation logged" in msg_lower
+                or "return tomorrow" in msg_lower
+                or j.get("code") == 0
+            ):
                 ok += 1
                 points = j.get("points", "-")
                 status = f"✅ 成功({response_summary(r)})"
