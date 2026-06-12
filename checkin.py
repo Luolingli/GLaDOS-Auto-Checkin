@@ -74,7 +74,7 @@ def parse_cookies(raw: str):
 
     cookies = []
     for line in raw.replace("\r", "\n").split("\n"):
-        line = line.strip()
+        line = normalize_cookie(line.strip())
         if not line:
             continue
 
@@ -84,6 +84,16 @@ def parse_cookies(raw: str):
         cookies.extend(part.strip() for part in parts if part.strip())
 
     return cookies
+
+
+def normalize_cookie(cookie: str):
+    return (
+        cookie.strip()
+        .removeprefix("Cookie:")
+        .removeprefix("cookie:")
+        .replace("；", ";")
+        .replace("＝", "=")
+    ).strip()
 
 
 def response_summary(resp):
