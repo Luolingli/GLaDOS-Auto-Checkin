@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
   schedule:
     # GitHub Actions 的 schedule 使用 UTC。公共 runner 可能严重延迟甚至丢弃单次 cron，
-    # 所以在北京时间中午到傍晚之间多次兜底触发；当天已签到会被脚本识别为成功。
-    - cron: '17 4 * * *'
-    - cron: '47 4 * * *'
-    - cron: '17 5 * * *'
-    - cron: '47 5 * * *'
-    - cron: '17 6 * * *'
-    - cron: '47 6 * * *'
-    - cron: '17 7 * * *'
-    - cron: '47 7 * * *'
-    - cron: '17 8 * * *'
-    - cron: '47 8 * * *'
+    # 所以从北京时间凌晨开始多次兜底触发；当天已签到会被脚本识别为成功。
+    - cron: '17 16 * * *'
+    - cron: '47 16 * * *'
+    - cron: '17 17 * * *'
+    - cron: '47 17 * * *'
+    - cron: '17 18 * * *'
+    - cron: '47 18 * * *'
+    - cron: '17 19 * * *'
+    - cron: '17 20 * * *'
+    - cron: '17 21 * * *'
+    - cron: '17 22 * * *'
 
 concurrency:
   group: glados-checkin-${{ github.ref }}
