@@ -1,132 +1,206 @@
-# 📌 GLaDOS  自动签到
+# 📌 GLaDOS 自动签到
 
 一个基于 **GitHub Actions** 的 **GLaDOS 自动签到脚本**。
- **无需服务器、无需编程基础**，每天自动帮你签到。
 
-------
+**无需服务器、无需编程基础**，每天自动帮你签到。
 
-## ✨ 功能说明
+---
 
-- ✅ **每天自动签到**
-- 🔁 **已签到自动识别，不会报错**
-- 👥 **支持多个账号**
-- 📬 **可选签到结果推送（Telegram Bot）**
-- 🆓 **完全免费，使用 GitHub Actions**
+## ✨ 功能特性
 
-------
+- ✅ 每天自动签到，已签到自动识别
+- 👥 支持多账号（`|||`、`&` 或换行连接）
+- 📊 查询总积分和剩余天数
+- 📬 8 种推送渠道：PushDeer / Server酱 / Telegram / PushPlus / 钉钉 / 飞书 / 企业微信 / 云湖
+- 🔄 网络请求自动重试（指数退避）
+- 🔒 日志脱敏（邮箱/Cookie 自动隐藏）
+- ✅ Cookie 格式预验证
+- 🔧 每月自动空提交保活
+- 💎 积分自动兑换（可选，消耗积分兑换会员天数）
+- 🆓 完全免费
+
+---
 
 ## 📂 项目结构
 
 ```
 .
-├── checkin.py                 # 签到脚本（不用动）
+├── checkin.py                 # 签到脚本
 └── .github/workflows/
-    └── glados.yml              # GitHub Actions 配置（不用动）
+    └── glados.yml             # GitHub Actions 配置
 ```
 
-------
+---
 
 ## 🚀 使用教程
 
 ### 第一步：Fork 本项目
 
-1. 点击右上角 **Fork**
-2. Fork 到你自己的 GitHub 账号下
+点击右上角 **Fork**，Fork 到你自己的 GitHub 账号下。
 
-👉 后续所有操作都在你 **自己的仓库** 中完成
-
-------
+---
 
 ### 第二步：获取 GLaDOS Cookie
 
-1. 打开浏览器，登录：https://glados.cloud
+1. 打开浏览器，登录 https://glados.cloud
 2. 按 **F12** 打开开发者工具
-3. 找到：
-   - Chrome：`Application` → `Cookies`
-   - Firefox：`存储` → `Cookies`
-4. 选择 `glados.cloud`
-5. **复制完整 Cookie 内容**
+3. 找到 `Application` → `Cookies` → `glados.cloud`
+4. 复制完整 Cookie 内容
 
-示例（示意）：
-
+示例：
 ```
 koa:sess=xxxxxx; koa:sess.sig=yyyyyy
 ```
 
-⚠️ **必须是完整的一整段，不要只复制一半**
+⚠️ **必须是完整的一整段**
 
-------
+---
 
 ### 第三步：添加 GitHub Secrets
 
 进入你 Fork 后的仓库：
 
-1. 点击 **Settings**
-2. 左侧选择 **Secrets and variables → Actions**
-3. 点击 **New repository secret**
+1. **Settings** → **Secrets and variables** → **Actions**
+2. 点击 **New repository secret**
+3. 添加：
+   - **Name**：`COOKIES`
+   - **Value**：粘贴刚才复制的 Cookie
+4. 点击 **Save**
 
-#### 添加第一个 Secret（必填）
+---
 
-- **Name**：`COOKIES`
-- **Value**：粘贴刚才复制的完整 Cookie
+### 第四步：（可选）配置推送
 
-点击 **Save**
+在 GitHub Secrets 中添加对应的环境变量：
 
-------
+| 渠道 | 必填环境变量 | 可选 |
+|------|-------------|------|
+| PushDeer | `SENDKEY` | - |
+| Server酱 | `SERVERCHAN_KEY` | - |
+| Telegram | `TG_BOT_TOKEN` + `TG_CHAT_ID` | - |
+| PushPlus | `PUSHPLUS_TOKEN` | - |
+| 钉钉机器人 | `DINGTALK_WEBHOOK` | `DINGTALK_SECRET` |
+| 飞书机器人 | `FEISHU_WEBHOOK` | `FEISHU_SECRET` |
+| 企业微信机器人 | `WECOM_BOT_WEBHOOK` | - |
+| 云湖机器人 | `YUNHU_TOKEN` + `YUNHU_RECV_ID` | `YUNHU_RECV_TYPE` |
 
-### （可选）第四步：开启签到结果推送
+> 🔑 **钉钉 / 飞书加签说明**：若机器人启用了「加签」校验，则 `DINGTALK_WEBHOOK` + `DINGTALK_SECRET`（或 `FEISHU_WEBHOOK` + `FEISHU_SECRET`）**必须同时配置**。只配 webhook 不配 secret 时，脚本会发送无签名请求并给出告警，加签机器人将鉴权失败。
 
-如果你想每天收到签到通知（可选）：
+---
 
-1. 在 Telegram 搜索 `@BotFather`
-2. 发送 `/newbot` 创建机器人，拿到 `TG_BOT_TOKEN`
-3. 打开你新建的机器人，先发一条任意消息
-4. 访问：`https://api.telegram.org/bot<你的TG_BOT_TOKEN>/getUpdates`
-5. 在返回内容中找到你的 `chat.id`（这就是 `TG_CHAT_ID`）
-6. 在 GitHub Secrets 中添加下面两个：
+### 第五步：（可选）积分自动兑换
 
-- **Name**：`TG_BOT_TOKEN`
-- **Value**：你的 Telegram Bot Token
+在 GitHub Secrets 中添加 `EXCHANGE_PLAN`（或 `GLADOS_EXCHANGE_PLAN`，二选一）即可启用自动兑换积分功能。**不配置则默认不兑换**，不影响任何现有签到逻辑。
 
-- **Name**：`TG_CHAT_ID`
-- **Value**：你的聊天 ID（数字，可能是负数）
+| 配置值 | 消耗积分 | 兑换天数 |
+|--------|---------|---------|
+| `plan100` | 100 积分 | 10 天 |
+| `plan200` | 200 积分 | 30 天 |
+| `plan500` | 500 积分 | 100 天 |
 
-不填也没关系，只是不会推送。
+机制说明：
 
-------
+- 每次签到后，仅在**总积分 ≥ 计划所需积分**时才调用兑换接口，否则自动跳过（不会浪费积分）。
+- 兑换结果会附加到签到日志行末尾，例如：`| 兑换:🎁 兑换成功(+30天)`。
+- 兑换失败 / 异常**不影响**签到结果与运行退出码。
 
-## 👥 多账号如何添加？
+---
 
-### 推荐规则：
+## 👥 多账号配置
 
-> **多个账号的 Cookie，每行一个**
-
-示例：
-
-```
-koa:sess=账号1; koa:sess.sig=账号1签名
-koa:sess=账号2; koa:sess.sig=账号2签名
-koa:sess=账号3; koa:sess.sig=账号3签名
-```
-
-⚠️ 注意事项：
-
-- 每个 cookie 都是完整的一段
-- 不要用逗号
-- 旧版 `cookie_账号1 & cookie_账号2` 的写法仍然兼容，但更推荐每行一个
-
-------
-
-## ⏰ 自动签到时间说明
-
-项目默认设置为：
+多个账号的 Cookie 用 `|||`、`&` 或**换行**连接（三种分隔符均可混用，推荐使用 `|||` 以避免与 Cookie 值冲突）：
 
 ```
-每天 UTC 16:17 到 22:17 多次兜底运行
+cookie_账号1 ||| cookie_账号2 ||| cookie_账号3
 ```
 
-换算成北京时间：
+或
 
-> 🌅 **每天凌晨 00:17 到早上 06:17 之间自动尝试多次签到**
+```
+cookie_账号1
+cookie_账号2
+cookie_账号3
+```
 
-GitHub Actions 的定时任务可能会有明显延迟，甚至偶尔丢弃单次 cron，所以项目配置了多个兜底时间点。脚本会自动识别当天已签到的返回，不会因为重复运行而报错；真正失败时会让 Actions 变红，并在日志中输出失败原因，方便你判断是否需要更新 Cookie。
+⚠️ Cookie 值本身不得包含 `|||`、`&` 或换行符，否则会被错误拆分。推荐使用 `|||` 作为分隔符，因为 Cookie 值中几乎不可能出现该字符串。
+
+---
+
+## ⏰ 签到时间
+
+每天 **UTC 16:17 ~ 22:17**（北京时间 **凌晨 00:17 ~ 早上 06:17**）多个兜底时间点自动运行。
+
+GitHub Actions 的定时任务可能明显延迟，甚至偶尔丢弃单次 cron，所以配置了多个兜底时间点。脚本会自动识别当天已签到的返回并计为成功，重复运行不会报错。
+
+---
+
+## 📋 签到结果
+
+| 状态 | 说明 |
+|------|------|
+| ✅ 成功 | 签到成功，显示获得积分 |
+| 🔄 已签到 | 今日已签到过 |
+| ❌ 失败 | 签到失败，显示原因 |
+
+---
+
+## ❓ 常见问题
+
+**Q: 签到提示 Cookie 失效？**
+
+A: Cookie 有有效期，请重新登录获取最新 Cookie 并更新 Secrets。
+
+**Q: Actions 被暂停了？**
+
+A: 项目内置每月空提交保活。如仍被暂停，手动触发一次 `workflow_dispatch`。
+
+**Q: 日志中的邮箱为什么显示不完整？**
+
+A: 出于隐私保护，邮箱会自动脱敏（如 `te***t@example.com`）。
+
+**Q: 可以同时配置多个推送渠道吗？**
+
+A: 可以，配置多个 Secrets 即可同时推送。
+
+---
+
+## 🔄 更新日志
+
+### v2.1.0
+
+**功能新增**
+- 新增积分自动兑换功能（#9，可选配置 `EXCHANGE_PLAN` / `GLADOS_EXCHANGE_PLAN`，支持 plan100/plan200/plan500 三档策略；默认关闭，不影响现有签到）
+- 兑换请求单次尝试不重试（非幂等操作，避免响应丢失后重复扣积分）
+
+---
+
+### v2.0.0
+
+**功能新增**
+- 新增 Telegram Bot 推送
+- 新增 PushPlus（推送加）推送
+- 新增钉钉机器人推送（支持加签验证）
+- 新增飞书机器人推送（支持加签验证）
+- 新增企业微信机器人推送
+- 新增云湖机器人推送
+- 新增总积分查询功能
+- 新增网络请求自动重试机制（指数退避）
+- 新增 Cookie 格式预验证
+- 新增日志脱敏处理（邮箱/Cookie 自动隐藏）
+- 新增每月自动空提交保活机制
+
+**问题修复**
+- 修复 PushPlus 推送域名问题
+- 修复飞书机器人加签算法
+
+**优化改进**
+- Python 版本升级至 3.11
+- 多账号间请求增加随机延迟
+- GitHub Actions 添加超时和并发控制
+- 代码整合为单文件，简化部署
+
+---
+
+## 📄 许可证
+
+MIT License
