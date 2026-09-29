@@ -57,6 +57,26 @@ COOKIE_MASK_LENGTH = 10
 COOKIE_MIN_LENGTH = 24
 # 重复签到判定关键词（L5：提升为模块级常量，便于维护/国际化）
 REPEAT_KEYWORDS = ("repeat", "already", "重复", "已签到", "签到过", "请勿")
+# GLaDOS 会把会话与「签发 Cookie 的浏览器系统」绑定：签到请求的 user-agent 与之不一致时
+# 返回 code=4 / reason=device-mismatch（message="Automated check-in detected..."），
+# 并在响应里回传 loginDevice。按该值换对应 UA 重试即可，无需用户手工配置。
+DEVICE_USER_AGENTS = {
+    "macos": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "windows": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "linux": (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+}
 # Cookie 会话字段的「结构」正则：任意前缀 + sess / sess.sig。
 # GLaDOS 早期使用 koa:sess，现网改签发 gld:sess；未来还可能再改名。
 # 因此校验「不认名字、只认结构」——只要存在 <任意前缀>:sess 与同前缀 :sess.sig 成对即通过，
@@ -595,6 +615,35 @@ def classify_checkin(code: Any, message: str) -> str:
     return "fail"
 
 
+def is_device_mismatch(resp: Dict[str, Any]) -> bool:
+    """服务端是否判定「签到请求设备 ≠ 登录设备」（返回 code=4/reason=device-mismatch）。"""
+    return str(resp.get("reason", "")).lower() == "device-mismatch"
+
+
+def headers_for_login_device(
+    headers: Dict[str, str], resp: Dict[str, Any], index: int
+) -> Optional[Dict[str, str]]:
+    """
+    按响应回传的 loginDevice 生成匹配登录设备的请求头。
+
+    返回 None 表示无法自动匹配（设备未知或当前 UA 已是该设备），调用方不应重试，
+    以免对同一份被拒请求重复计数。
+    """
+    device = str(resp.get("loginDevice") or "").strip()
+    alt = DEVICE_USER_AGENTS.get(device.lower())
+    if alt is None or alt == headers.get("user-agent"):
+        logger.warning(
+            "账号 %d 设备不匹配且无法自动适配：登录设备=%s，已知设备=%s",
+            index, device or "未知", "/".join(sorted(DEVICE_USER_AGENTS)),
+        )
+        return None
+    logger.info(
+        "账号 %d 设备不匹配（登录设备=%s，当前设备=%s），改用登录设备 UA 重试",
+        index, device, resp.get("currentDevice") or "?",
+    )
+    return {**headers, "user-agent": alt}
+
+
 @retry_on_failure()
 def checkin_request(session: requests.Session, headers: Dict[str, str]) -> Dict[str, Any]:
     """执行签到请求（带重试）"""
@@ -653,6 +702,13 @@ def checkin_account(
     try:
         # 1. 签到
         j = checkin_request(session, headers)
+        # 会话与登录设备绑定：UA 与签发 Cookie 的浏览器系统不一致会被判为自动签到，
+        # 响应会回传 loginDevice，据此换 UA 重试一次（换不出则保留原响应走失败分支）。
+        if is_device_mismatch(j):
+            alt_headers = headers_for_login_device(headers, j, index)
+            if alt_headers is not None:
+                headers = alt_headers
+                j = checkin_request(session, headers)
         code = j.get("code", -2)
         message = j.get("message", "")
         # H1：GLaDOS 不返回 points 字段，从 message 文本解析本次获得积分
@@ -664,9 +720,15 @@ def checkin_account(
         elif result == "repeat":
             status = "🔄 已签到"
         else:
-            # 区分「服务端鉴权失败」与「其它业务失败」：鉴权失败通常是 Cookie 过期/
-            # 复制不完整，需要给出「重新获取 Cookie」的可操作提示，避免与格式问题混淆。
-            if any(kw in (message or "").lower() for kw in AUTH_FAIL_KEYWORDS):
+            # 三类失败原因分别提示，避免把「设备不匹配」误读成「Cookie 过期」：
+            # 前者要换 UA/登录设备，后者才需要重新复制 Cookie。
+            if is_device_mismatch(j):
+                status = (
+                    f"❌ 设备不匹配(登录设备={j.get('loginDevice') or '未知'}，"
+                    f"请求设备={j.get('currentDevice') or '?'}) → 请在该设备上登录 GLaDOS 后重取 Cookie"
+                )
+                logger.warning("账号 %d 设备不匹配且自动适配未生效: %s", index, message)
+            elif any(kw in (message or "").lower() for kw in AUTH_FAIL_KEYWORDS):
                 status = f"❌ 鉴权失败({message}) → 请重新获取 Cookie"
                 logger.warning("账号 %d 鉴权失败，Cookie 可能已过期或复制不完整: %s", index, message)
             else:

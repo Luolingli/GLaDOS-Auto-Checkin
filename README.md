@@ -165,7 +165,13 @@ A: 说明 Cookie 已失效或复制不完整，**请重新登录 GLaDOS 获取�
 
 **Q: Cookie 有有效期吗？**
 
-A: 有。Cookie 会随会话过期，需重新登录获取最新 Cookie 并更新 Secrets。
+A: 有。会话过期后需重新登录获取最新 Cookie 并更新 Secrets。另外服务端还会把会话与登录设备绑定（见下一条），Cookie 字段自身没过期也可能被拒。
+
+**Q: 签到提示 `Automated check-in detected`（`reason: device-mismatch`）？**
+
+A: GLaDOS 会把会话与**登录时的浏览器系统**绑定：签到请求的 `user-agent` 与登录设备不一致（如登录 macOS、脚本发 Windows）就会被判为自动签到。
+服务端会在响应里回传 `loginDevice`，脚本据此**自动换成对应设备 UA 重试一次**，通常无需任何配置。
+若日志显示「设备不匹配且无法自动适配」（例如登录设备是 iPad），请在该设备的浏览器里重新登录 GLaDOS 后重取 Cookie，脚本即可自动识别。
 
 **Q: Actions 被暂停了？**
 
