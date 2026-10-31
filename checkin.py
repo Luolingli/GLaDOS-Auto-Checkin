@@ -31,37 +31,16 @@ STATUS_URL = "https://glados.cloud/api/user/status"
 POINTS_URL = "https://glados.cloud/api/user/points"
 EXCHANGE_URL = "https://glados.cloud/api/user/exchange"
 
-# 反检测增强：使用更真实的浏览器指纹
-USER_AGENTS = [
-    # Chrome 各版本
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    # Edge
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
-    # Firefox
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0",
-]
-
-def get_random_headers():
-    """生成随机化的请求头，模拟真实浏览器"""
-    ua = random.choice(USER_AGENTS)
-    return {
-        "origin": "https://glados.cloud",
-        "referer": "https://glados.cloud/console/checkin",
-        "user-agent": ua,
-        "accept": "application/json, text/plain, */*",
-        "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "accept-encoding": "gzip, deflate, br",
-        "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Windows"',
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-    }
-
-HEADERS_BASE = get_random_headers()
+# 使用最新版本的 Chrome UA，模拟真实浏览器
+HEADERS_BASE = {
+    "origin": "https://glados.cloud",
+    "referer": "https://glados.cloud/console/checkin",
+    "user-agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    ),
+}
 PAYLOAD = {"token": "glados.cloud"}
 TIMEOUT = (5, 15)  # (连接超时, 读取超时)
 MAX_RETRY = 3
@@ -610,28 +589,11 @@ def classify_checkin(code: Any, message: str) -> str:
 
 @retry_on_failure()
 def checkin_request(session: requests.Session, headers: Dict[str, str]) -> Dict[str, Any]:
-    """执行签到请求（带重试）- 增强反检测"""
-    # 1. 随机延迟模拟人类思考时间（1-3秒）
-    time.sleep(random.uniform(1.0, 3.0))
+    """执行签到请求（带重试）- 添加随机延迟模拟人类行为"""
+    # 随机延迟 2-5 秒，模拟人类思考时间
+    time.sleep(random.uniform(2.0, 5.0))
 
-    # 2. 先访问状态页面，模拟真实用户浏览行为
-    try:
-        session.get(STATUS_URL, headers=headers, timeout=TIMEOUT)
-        time.sleep(random.uniform(0.5, 1.5))
-    except Exception:
-        pass  # 失败不影响签到
-
-    # 3. 使用随机化的 headers，每次请求都不同
-    dynamic_headers = get_random_headers()
-    dynamic_headers["cookie"] = headers.get("cookie", "")
-
-    # 4. 添加更多真实浏览器的请求头
-    dynamic_headers["dnt"] = "1"
-    dynamic_headers["cache-control"] = "no-cache"
-    dynamic_headers["pragma"] = "no-cache"
-
-    # 5. 执行签到请求
-    r = session.post(CHECKIN_URL, headers=dynamic_headers, json=PAYLOAD, timeout=TIMEOUT)
+    r = session.post(CHECKIN_URL, headers=headers, json=PAYLOAD, timeout=TIMEOUT)
     r.raise_for_status()
     return require_json(r)  # 非 JSON 响应抛异常进入重试（M1）
 
