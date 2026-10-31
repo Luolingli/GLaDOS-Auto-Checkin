@@ -3,7 +3,8 @@ name: GLaDOS Auto Checkin
 on:
   workflow_dispatch:  # 手动触发
   schedule:
-    - cron: '0 4 * * *'   # 每日 UTC 4 点签到（北京时间 12 点）
+    # 改为每天只签到一次，北京时间中午12点（UTC 4:00）
+    - cron: '0 4 * * *'
     - cron: '0 0 1 * *'   # 每月 1 号保活空提交
 
 jobs:
@@ -47,7 +48,6 @@ jobs:
           YUNHU_TOKEN: ${{ secrets.YUNHU_TOKEN }}
           YUNHU_RECV_ID: ${{ secrets.YUNHU_RECV_ID }}
           YUNHU_RECV_TYPE: ${{ secrets.YUNHU_RECV_TYPE }}
-          # #9 积分兑换计划（可选；不配置则默认不兑换，不影响现有签到）
           EXCHANGE_PLAN: ${{ secrets.EXCHANGE_PLAN }}
           GLADOS_EXCHANGE_PLAN: ${{ secrets.GLADOS_EXCHANGE_PLAN }}
 
